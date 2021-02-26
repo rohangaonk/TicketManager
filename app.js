@@ -2,6 +2,8 @@ const express = require("express");
 const mongoose = require("mongoose");
 const app = express();
 
+require("dotenv").config();
+
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
@@ -14,7 +16,8 @@ mongoose
   .then(() => console.log("Mongodb connected"))
   .catch((err) => console.log(err));
 
-app.use("/users", require("./routes/user"));
+app.use("/user", require("./routes/user"));
+app.use("/shows", require("./routes/show"));
 
 const PORT = process.env.PORT || 5000;
 

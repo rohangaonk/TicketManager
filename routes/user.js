@@ -1,8 +1,14 @@
 const express = require("express");
 const router = express.Router();
+const { registerUser, loginUser, addMoney } = require("../handlers/user");
 
-router.get("/", (req, res) => {
-  res.status(200).json({ message: "success" });
-});
+// register user
+router.post("/register", registerUser);
+
+// login user
+router.post("/login", loginUser);
+
+//
+router.post("/:userId", addMoney);
 
 module.exports = router;
