@@ -54,9 +54,11 @@ exports.bookTicket = (req, res) => {
   Show.findOne({ _id: showId })
     .then((show) => {
       const diff = show.time - new Date();
+      // book tickets 3 days prior
       if (diff < 3 * 24 * 60 * 60 * 1000) {
         throw new CustomError("Tickets no longer available", 400);
       }
+      // check if show had tickets left
       if (show.tickets < ticketCount)
         throw new CustomError("Fewer tickets remaining", 400);
 
@@ -66,6 +68,7 @@ exports.bookTicket = (req, res) => {
       ticketObj.name = show.name;
       ticketObj.quantity = ticketCount;
       ticketObj.price = totalPrice;
+      ticketObj.time = show.time;
 
       return User.findOne({ _id: userId });
     })
@@ -76,7 +79,7 @@ exports.bookTicket = (req, res) => {
       let numberOfTickets = 0;
       if (user.bookings.length > 0)
         numberOfTickets = user.bookings.reduce(
-          (acc, item) => acc + item.quantity,
+          (acc, item) => (item.time - new Date() > 0 ? acc + item.quantity : 0),
           0
         );
       console.log(numberOfTickets);
