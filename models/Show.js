@@ -8,6 +8,10 @@ const ShowsSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  image: {
+    type: String,
+    required: true,
+  },
   genre: {
     type: String,
     required: true,
@@ -26,5 +30,5 @@ const ShowsSchema = new mongoose.Schema({
   },
 });
 
-const User = mongoose.model("Shows", ShowsSchema);
-module.exports = User;
+const Show = mongoose.model("Shows", ShowsSchema);
+module.exports = Show;

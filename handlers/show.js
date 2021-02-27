@@ -1,5 +1,6 @@
-const User = require("../models/show");
-const Show = require("../models/show");
+const User = require("../models/User");
+const Show = require("../models/Show");
+const CustomError = require("../ErrorHandler/error");
 
 exports.addShow = (req, res) => {
   let { name, time, genre, type, price, tickets } = req.body;
@@ -23,29 +24,10 @@ exports.addShow = (req, res) => {
 };
 
 exports.getShows = (req, res) => {
-  const { genre, type } = req.query;
-
-  if (genre) {
-    Show.find({ genre: genre }).then((shows) => {
-      if (!shows) {
-        res.status(400).json({ message: "No shows matching this genre" });
-      } else {
-        res.status(200).json({ data: shows });
-      }
-    });
-  } else if (type) {
-    Show.find({ type: type }).then((shows) => {
-      if (!shows) {
-        res.status(400).json({ message: "No shows matching this type" });
-      } else {
-        res.status(200).json({ data: shows });
-      }
-    });
-  } else {
-    Show.find()
-      .then((shows) => res.status(200).json({ data: shows }))
-      .catch((err) => res.status(500).json({ message: "server error" }));
-  }
+  let filter = { ...req.query };
+  Show.find(filter)
+    .then((shows) => res.status(200).json({ data: shows }))
+    .catch((err) => res.status(500).json({ message: "server error" }));
 };
 
 exports.searchShow = (req, res) => {
@@ -56,24 +38,69 @@ exports.searchShow = (req, res) => {
     .catch((err) => res.status(500).json({ message: "server error" }));
 };
 
-// imcomplete
 exports.bookTicket = (req, res) => {
-  const { count, userId } = req.body;
+  const { ticketCount, userId } = req.body;
   const { showId } = req.params;
+  let totalPrice = 0;
+  let totalTickets = 0;
+  let ticketObj = {};
 
-  if (count > 5)
+  // At a time only 5 tickets can be bought
+  if (ticketCount > 5)
     return res
-      .status(100)
+      .status(400)
       .json({ message: "only 5 tickets can be booked at a time" });
 
   Show.findOne({ _id: showId })
     .then((show) => {
-      const diff = new Date() - show.time;
-      if (show.tickets < count)
-        res.status(100).json({ message: "Fewer tickets remaining" });
-      else if (diff < 3 * 24 * 60 * 60 * 1000) {
-        res.status(100).json({ message: "You are out of time" });
-      } else return User.findOne({ _id: userId });
+      const diff = show.time - new Date();
+      if (diff < 3 * 24 * 60 * 60 * 1000) {
+        throw new CustomError("Tickets no longer available", 400);
+      }
+      if (show.tickets < ticketCount)
+        throw new CustomError("Fewer tickets remaining", 400);
+
+      totalTickets = show.tickets;
+      totalPrice = ticketCount * show.price;
+      ticketObj.image = show.image;
+      ticketObj.name = show.name;
+      ticketObj.quantity = ticketCount;
+      ticketObj.price = totalPrice;
+
+      return User.findOne({ _id: userId });
     })
-    .then((user) => {});
+    .then((user) => {
+      if (user.wallet < totalPrice)
+        throw new CustomError("Recharge your wallet", 400);
+
+      let numberOfTickets = 0;
+      if (user.bookings.length > 0)
+        numberOfTickets = user.bookings.reduce(
+          (acc, item) => acc + item.quantity,
+          0
+        );
+      console.log(numberOfTickets);
+      if (numberOfTickets + ticketCount > 15)
+        throw new CustomError("You can buy only 15 tickets", 400);
+
+      user.bookings.push(ticketObj);
+      user.wallet = user.wallet - totalPrice; //payement
+      user.wallet = user.wallet + totalPrice * 0.1; //cashback
+      console.log(user.wallet);
+      return user.save();
+    })
+    .then(() => {
+      return Show.findOneAndUpdate(
+        { _id: showId },
+        { tickets: totalTickets - ticketCount }
+      );
+    })
+    .then(() => res.status(200).json({ message: "booking successfull" }))
+    .catch((err) => {
+      if (err instanceof CustomError)
+        res.status(err.statusCode).json({ message: err.message });
+      else {
+        res.status(500).json({ message: "server error" });
+      }
+    });
 };

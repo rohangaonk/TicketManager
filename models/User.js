@@ -19,8 +19,9 @@ const UserSchema = new mongoose.Schema({
   wallet: {
     type: Number,
   },
-  ticket: {
+  bookings: {
     type: Array,
+    default: [],
   },
 });
 
