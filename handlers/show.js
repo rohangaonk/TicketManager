@@ -3,8 +3,9 @@ const Show = require("../models/Show");
 const CustomError = require("../ErrorHandler/error");
 
 exports.addShow = (req, res) => {
-  let { name, time, genre, type, price, tickets } = req.body;
+  let { name, time, genre, type, price, tickets, image } = req.body;
   //  time =  Febraury 28, 2021 03:24:00
+
   time = new Date(time);
   price = parseInt(price);
   tickets = parseInt(tickets);
@@ -16,11 +17,15 @@ exports.addShow = (req, res) => {
     type,
     price,
     tickets,
+    image,
   });
   newShow
     .save()
     .then(() => res.status(201).json({ message: "show created" }))
-    .catch((err) => res.status(500).json({ messsage: "server error" }));
+    .catch((err) => {
+      console.log(err.message);
+      res.status(500).json({ messsage: "server error" });
+    });
 };
 
 exports.getShows = (req, res) => {
